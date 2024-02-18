@@ -5,8 +5,7 @@ const nunjucks = require("nunjucks");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const { nanoid } = require("nanoid");
-const bcrypt = require("bcryptjs");
-
+const argon = require("argon2");
 const app = express();
 
 const { MongoClient, ObjectId } = require("mongodb");
@@ -65,7 +64,7 @@ app.get("/", auth(), (req, res) => {
 
 const createUser = async (db, username, password) => {
   const id = ObjectId();
-  password = bcrypt.hashSync(password, 7);
+  password = await argon.hash(password, { hashLength: 60 });
   await db.collection("users").insertOne({ _id: ObjectId(id), username, password });
   return id;
 };
@@ -100,31 +99,38 @@ const createSession = async (db, userId) => {
 async function deleteSession(db, sessionId) {
   await db.collection("sessions").deleteOne({ sessionId });
 }
-
+async function loginAccount(db, res, id) {
+  const sessionId = await createSession(db, id);
+  res.cookie("sessionId", sessionId, { httpOnly: true }).redirect("/");
+}
 app.post("/login", bodyParser.urlencoded({ extended: false }), async (req, res) => {
   const { username, password } = req.body;
   const user = await findUserByUsername(req.db, username);
-  if (!user || !bcrypt.compareSync(password, user.password)) {
+  const checkPass = await argon.verify(user.password, password);
+
+  if (!user || !checkPass) {
     return res.redirect("/?authError=true");
   }
-  const sessionId = await createSession(req.db, user._id);
-  res.cookie("sessionId", sessionId, { httpOnly: true }).redirect("/");
+  loginAccount(req.db, res, user._id);
 });
 
 app.post("/signup", bodyParser.urlencoded({ extended: false }), async (req, res) => {
   const { username, password } = req.body;
   const user = await findUserByUsername(req.db, username);
-  // console.log(bcrypt.compareSync(password, user.password));
-  if (user && bcrypt.compareSync(password, user.password)) {
-    console.log("Такой пользователь уже существует");
-    const sessionId = await createSession(req.db, user._id);
-    res.cookie("sessionId", sessionId, { httpOnly: true }).redirect("/");
-  } else if (user && !bcrypt.compareSync(password, user.password)) {
-    return res.redirect("/?authError=true");
+
+  if (user) {
+    const checkPass = await argon.verify(user.password, password);
+
+    if (checkPass) {
+      console.log("Такой пользователь уже существует");
+      const sessionId = await createSession(req.db, user._id);
+      res.cookie("sessionId", sessionId, { httpOnly: true }).redirect("/");
+    } else {
+      return res.redirect("/?authError=true");
+    }
   } else {
     const idUser = await createUser(req.db, username, password);
-    const sessionId = await createSession(req.db, idUser);
-    res.cookie("sessionId", sessionId, { httpOnly: true }).redirect("/");
+    loginAccount(req.db, res, idUser);
   }
 });
 
@@ -146,9 +152,8 @@ function createInterval(timers) {
 app.get("/api/timers", auth(), async (req, res) => {
   let data = await req.db.collection("timers").find({}).toArray();
   data = createInterval(data);
-  // console.log(req.user._id);
 
-  if (req.query.isActive === "true") {
+  if (req.query.isActive === "true" && req.user) {
     data = data.filter((u) => u.isActive === true && JSON.stringify(u.user_id) === JSON.stringify(req.user._id));
     res.json(data);
   } else {
@@ -170,10 +175,8 @@ app.post("/api/timers", auth(), async (req, res) => {
 });
 
 app.post("/api/timers/:id/stop", async (req, res) => {
-  // console.log(req.params.id);
   const d = new Date();
   const timer = await req.db.collection("timers").findOne({ _id: ObjectId(`${req.params.id}`) });
-  // console.log(timer);
   const timer2 = await req.db
     .collection("timers")
     .updateOne(
