@@ -2,11 +2,21 @@
   "name": "pg_test",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.mjs",
   "scripts": {
     "db:migrate": "knex migrate:latest",
     "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "./",
+      "src"
+    ],
+    "ext": "js, mjs, css, html, njk",
+    "execMap": {
+      "ts": "ts-node"
+    }
   },
   "keywords": [],
   "author": "",
@@ -20,9 +30,9 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "knex": "^3.0.1",
-    "mongodb": "3.6",
+    "mongodb": "^6.3.0",
     "nanoid": "^3.3.7",
-    "nodemon": "^3.0.1",
+    "nodemon": "^3.0.3",
     "nunjucks": "^3.2.4",
     "pg": "^8.11.3"
   }
