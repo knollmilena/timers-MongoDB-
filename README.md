@@ -16,14 +16,14 @@
 
 <h2>Внешний вид приложения</h2>
 <h4>Вход или регистрация</h4>
-<р>
-![Image alt](https://github.com/knollmilena/timers-MongoDB-/blob/master/entry.jpg)
-</p>
+
+![Image alt](https://github.com/knollmilena/timers-MongoDB-/raw/master/entry.jpg)
+
 
 <h4>Личный кабинет изнутри</h4>
-<р>
-![Image alt](https://github.com/knollmilena/timers-MongoDB-/blob/master/inside.jpg)
-</p>
+
+![Image alt](https://github.com/knollmilena/timers-MongoDB-/raw/master/inside.jpg)
+
 
 <h2>Инструкция по запуску</h2>
 
